@@ -206,39 +206,51 @@ async def turn_next(req: TurnNextRequest):
         for t in req.turnsSoFar
     ])
 
-    eval_prompt = f"""Evaluate this interview answer:
+    # NOTE: Per-turn evaluation commented out for performance optimization.
+    # The evaluation was not being used - follow-up decisions are made by a separate LLM call,
+    # and the final report does its own comprehensive analysis.
+    # Uncomment below to re-enable per-turn evaluation if needed in the future.
+    #
+    # eval_prompt = f"""Evaluate this interview answer:
+    #
+    # Role: {req.roleTitle}
+    # Question asked: {req.aiPromptedText}
+    # Candidate's answer: {req.userTranscript}
+    #
+    # Provide a JSON evaluation:
+    # {{
+    #   "scores": {{
+    #     "relevance": 1-10,
+    #     "clarity": 1-10,
+    #     "specificity": 1-10,
+    #     "structure": 1-10,
+    #     "confidenceMarkers": 1-10
+    #   }},
+    #   "star": {{
+    #     "S": "situation identified or empty",
+    #     "T": "task identified or empty",
+    #     "A": "action identified or empty",
+    #     "R": "result identified or empty"
+    #   }},
+    #   "notes": ["observation 1", "observation 2"]
+    # }}
+    #
+    # Respond ONLY with valid JSON."""
+    #
+    # eval_messages = [{"role": "user", "content": eval_prompt}]
+    # eval_result = await call_llm_json(eval_messages)
+    #
+    # internal_eval = InternalEval(
+    #     scores=eval_result.get("scores", {"relevance": 5, "clarity": 5, "specificity": 5, "structure": 5, "confidenceMarkers": 5}),
+    #     star=eval_result.get("star", {"S": "", "T": "", "A": "", "R": ""}),
+    #     notes=eval_result.get("notes", [])
+    # )
 
-Role: {req.roleTitle}
-Question asked: {req.aiPromptedText}
-Candidate's answer: {req.userTranscript}
-
-Provide a JSON evaluation:
-{{
-  "scores": {{
-    "relevance": 1-10,
-    "clarity": 1-10,
-    "specificity": 1-10,
-    "structure": 1-10,
-    "confidenceMarkers": 1-10
-  }},
-  "star": {{
-    "S": "situation identified or empty",
-    "T": "task identified or empty",
-    "A": "action identified or empty",
-    "R": "result identified or empty"
-  }},
-  "notes": ["observation 1", "observation 2"]
-}}
-
-Respond ONLY with valid JSON."""
-
-    eval_messages = [{"role": "user", "content": eval_prompt}]
-    eval_result = await call_llm_json(eval_messages)
-
+    # Placeholder evaluation (not used but required by response model)
     internal_eval = InternalEval(
-        scores=eval_result.get("scores", {"relevance": 5, "clarity": 5, "specificity": 5, "structure": 5, "confidenceMarkers": 5}),
-        star=eval_result.get("star", {"S": "", "T": "", "A": "", "R": ""}),
-        notes=eval_result.get("notes", [])
+        scores={"relevance": 0, "clarity": 0, "specificity": 0, "structure": 0, "confidenceMarkers": 0},
+        star={"S": "", "T": "", "A": "", "R": ""},
+        notes=[]
     )
 
     if req.phase == "GREETING":

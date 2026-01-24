@@ -36,3 +36,6 @@ coverage/
 # AI
 .claude/
 CLAUDE.md
+
+# Developer notes (untracked)
+EXPLANATION.md

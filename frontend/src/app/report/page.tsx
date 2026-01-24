@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -36,6 +38,8 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isIncomplete, setIsIncomplete] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -98,6 +102,62 @@ export default function ReportPage() {
     fetchReport();
   }, [router]);
 
+  const handleDownloadPDF = async () => {
+    if (!reportRef.current || !report) return;
+
+    setIsDownloading(true);
+
+    try {
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        backgroundColor: "#1f2937",
+        logging: false,
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 0;
+
+      // Calculate how many pages we need
+      const scaledHeight = imgHeight * ratio;
+      const pageHeight = pdfHeight;
+      let heightLeft = scaledHeight;
+      let position = 0;
+
+      // First page
+      pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      heightLeft -= pageHeight;
+
+      // Additional pages if needed
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", imgX, position, imgWidth * ratio, imgHeight * ratio);
+        heightLeft -= pageHeight;
+      }
+
+      const roleTitle = report.roleTitle || "Interview";
+      const date = new Date().toISOString().split("T")[0];
+      pdf.save(`${roleTitle.replace(/\s+/g, "_")}_Report_${date}.pdf`);
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-400";
     if (score >= 60) return "text-yellow-400";
@@ -148,120 +208,146 @@ export default function ReportPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Interview Report</h1>
-            {report.roleTitle && (
-              <p className="text-gray-400">{report.roleTitle}</p>
-            )}
+          {/* Download Button - Outside the PDF capture area */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              {isDownloading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Generating PDF...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download PDF
+                </>
+              )}
+            </button>
           </div>
 
-          {isIncomplete && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-4 mb-6"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-yellow-400 text-xl">⚠️</span>
-                <div>
-                  <h3 className="text-yellow-400 font-semibold mb-1">Incomplete Interview</h3>
-                  <p className="text-yellow-200/80 text-sm">
-                    This interview was ended early. The report is based on limited responses
-                    and may not fully reflect your interview capabilities. For a comprehensive
-                    assessment, we recommend completing a full interview session.
-                  </p>
+          {/* Report Content - This will be captured for PDF */}
+          <div ref={reportRef} className="space-y-6 bg-gray-900 p-4 rounded-lg">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold mb-2">Interview Report</h1>
+              {report.roleTitle && (
+                <p className="text-gray-400">{report.roleTitle}</p>
+              )}
+              <p className="text-gray-500 text-sm mt-2">
+                Generated on {new Date().toLocaleDateString()}
+              </p>
+            </div>
+
+            {isIncomplete && (
+              <div className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <span className="text-yellow-400 text-xl">⚠️</span>
+                  <div>
+                    <h3 className="text-yellow-400 font-semibold mb-1">Incomplete Interview</h3>
+                    <p className="text-yellow-200/80 text-sm">
+                      This interview was ended early. The report is based on limited responses
+                      and may not fully reflect your interview capabilities. For a comprehensive
+                      assessment, we recommend completing a full interview session.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          )}
+            )}
 
-          <div className="bg-gray-800 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Overall Score</h2>
-              <span className={`text-4xl font-bold ${getScoreColor(report.overallScore)}`}>
-                {report.overallScore}
-              </span>
-            </div>
-            <div className="w-full bg-gray-700 rounded-full h-3">
-              <div
-                className={`h-3 rounded-full transition-all ${getScoreBarColor(report.overallScore)}`}
-                style={{ width: `${report.overallScore}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Subscores</h2>
-            <div className="space-y-4">
-              {Object.entries(report.subscores).map(([key, value]) => (
-                <div key={key}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="capitalize text-gray-300">{key}</span>
-                    <span className={getScoreColor(value)}>{value}</span>
-                  </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${getScoreBarColor(value)}`}
-                      style={{ width: `${value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
             <div className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4 text-green-400">Strengths</h2>
-              <ul className="space-y-2">
-                {report.strengths.map((strength, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-green-400 mt-1">✓</span>
-                    <span className="text-gray-300">{strength}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Overall Score</h2>
+                <span className={`text-4xl font-bold ${getScoreColor(report.overallScore)}`}>
+                  {report.overallScore}
+                </span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-3">
+                <div
+                  className={`h-3 rounded-full transition-all ${getScoreBarColor(report.overallScore)}`}
+                  style={{ width: `${report.overallScore}%` }}
+                />
+              </div>
             </div>
 
             <div className="bg-gray-800 rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4 text-yellow-400">Areas for Improvement</h2>
-              <ul className="space-y-2">
-                {report.improvements.map((improvement, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="text-yellow-400 mt-1">→</span>
-                    <span className="text-gray-300">{improvement}</span>
+              <h2 className="text-xl font-semibold mb-4">Subscores</h2>
+              <div className="space-y-4">
+                {Object.entries(report.subscores).map(([key, value]) => (
+                  <div key={key}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="capitalize text-gray-300">{key}</span>
+                      <span className={getScoreColor(value)}>{value}</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${getScoreBarColor(value)}`}
+                        style={{ width: `${value}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 text-green-400">Strengths</h2>
+                <ul className="space-y-2">
+                  {report.strengths.map((strength, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-green-400 mt-1">✓</span>
+                      <span className="text-gray-300">{strength}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-semibold mb-4 text-yellow-400">Areas for Improvement</h2>
+                <ul className="space-y-2">
+                  {report.improvements.map((improvement, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-yellow-400 mt-1">→</span>
+                      <span className="text-gray-300">{improvement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Pattern Under Pressure</h2>
+              <p className="text-gray-300 leading-relaxed">{report.patternUnderPressure}</p>
+            </div>
+
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Ideal Answer Example</h2>
+              <div className="bg-gray-700 rounded-lg p-4">
+                <p className="text-gray-300 leading-relaxed italic">{report.idealAnswerRewrite}</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-800 rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Next Steps</h2>
+              <ol className="space-y-2">
+                {report.nextSteps.map((step, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                      {i + 1}
+                    </span>
+                    <span className="text-gray-300">{step}</span>
                   </li>
                 ))}
-              </ul>
+              </ol>
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Pattern Under Pressure</h2>
-            <p className="text-gray-300 leading-relaxed">{report.patternUnderPressure}</p>
-          </div>
-
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Ideal Answer Example</h2>
-            <div className="bg-gray-700 rounded-lg p-4">
-              <p className="text-gray-300 leading-relaxed italic">{report.idealAnswerRewrite}</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Next Steps</h2>
-            <ol className="space-y-2">
-              {report.nextSteps.map((step, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                    {i + 1}
-                  </span>
-                  <span className="text-gray-300">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
+          {/* Action Buttons - Outside the PDF capture area */}
           <div className="flex gap-4">
             <button
               onClick={() => router.push("/setup")}
