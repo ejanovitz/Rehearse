@@ -35,6 +35,7 @@ export default function ReportPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isIncomplete, setIsIncomplete] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -44,6 +45,12 @@ export default function ReportPage() {
       const storedRoleDesc = localStorage.getItem("roleDesc");
       const storedIntensity = localStorage.getItem("intensity");
       const userName = localStorage.getItem("userName");
+      const incomplete = localStorage.getItem("interviewIncomplete");
+
+      if (incomplete === "true") {
+        setIsIncomplete(true);
+        localStorage.removeItem("interviewIncomplete");
+      }
 
       if (!storedSession || !storedTurns) {
         router.push("/");
@@ -147,6 +154,26 @@ export default function ReportPage() {
               <p className="text-gray-400">{report.roleTitle}</p>
             )}
           </div>
+
+          {isIncomplete && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-yellow-500/20 border border-yellow-500 rounded-lg p-4 mb-6"
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-yellow-400 text-xl">⚠️</span>
+                <div>
+                  <h3 className="text-yellow-400 font-semibold mb-1">Incomplete Interview</h3>
+                  <p className="text-yellow-200/80 text-sm">
+                    This interview was ended early. The report is based on limited responses
+                    and may not fully reflect your interview capabilities. For a comprehensive
+                    assessment, we recommend completing a full interview session.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           <div className="bg-gray-800 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
