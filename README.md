@@ -10,7 +10,7 @@ A live interview simulator to help coach you and your responses during an interv
 cd backend
 pip install -r requirements.txt
 cp .env.example .env  # Edit with your API keys
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8000 or python -m uvicorn main:app --reload --port 8000
 ```
 
 ### Frontend

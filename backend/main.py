@@ -15,7 +15,7 @@ app = FastAPI(title="Interview Simulator API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -174,6 +174,8 @@ Generate a JSON response with:
 1. "greeting" - A brief, natural greeting to start the interview (1-2 sentences welcoming them)
 2. "firstQuestion" - The first behavioral interview question appropriate for this role and level
 
+IMPORTANT: Do NOT include any instructions or hints on how to answer the question. Just ask the question directly without telling the candidate to use STAR format, provide specific examples, or any other answering guidance. Let the candidate answer naturally.
+
 Respond ONLY with valid JSON in this format:
 {{"greeting": "...", "firstQuestion": "..."}}"""
 
@@ -261,6 +263,8 @@ The candidate just responded to your greeting. Now ask the first main behavioral
 Previous conversation:
 {conversation_history}
 
+IMPORTANT: Do NOT include any instructions or hints on how to answer the question. Just ask the question directly without telling the candidate to use STAR format, provide specific examples, or any other answering guidance.
+
 Generate a JSON response:
 {{"aiText": "your response transitioning to the first question", "action": "NEXT_MAIN"}}
 
@@ -314,6 +318,8 @@ Decide: should you ask a follow-up to dig deeper, or move to the next main quest
 - If the answer was vague or you want more detail, ask ONE follow-up
 - If the answer was complete, move to the next main behavioral question
 
+IMPORTANT: Do NOT include any instructions or hints on how to answer the question. Just ask the question directly without telling the candidate to use STAR format, provide specific examples, or any other answering guidance.
+
 Respond ONLY with valid JSON:
 {{"action": "ASK_FOLLOWUP" or "NEXT_MAIN", "aiText": "your follow-up question OR your transition + next main question"}}
 
@@ -341,6 +347,8 @@ Conversation so far:
 
 Generate the next main behavioral question (question #{req.mainQuestionIndex + 2} of 3).
 Make it relevant to the role and different from previous questions.
+
+IMPORTANT: Do NOT include any instructions or hints on how to answer the question. Just ask the question directly without telling the candidate to use STAR format, provide specific examples, or any other answering guidance.
 
 Respond ONLY with valid JSON:
 {{"action": "NEXT_MAIN", "aiText": "natural transition + your next behavioral question"}}

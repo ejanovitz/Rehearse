@@ -26,10 +26,10 @@ export default function StartPage() {
       >
         <div className="bg-gray-800 rounded-lg p-8 shadow-xl">
           <h1 className="text-3xl font-bold text-center mb-2">
-            Interview Simulator
+            PRESSURE
           </h1>
           <p className="text-gray-400 text-center mb-8">
-            Practice your interview skills with AI coaching
+            Train for the moments that matter
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
