@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -38,8 +36,6 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isIncomplete, setIsIncomplete] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -102,62 +98,6 @@ export default function ReportPage() {
     fetchReport();
   }, [router]);
 
-  const handleDownloadPDF = async () => {
-    if (!reportRef.current || !report) return;
-
-    setIsDownloading(true);
-
-    try {
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        backgroundColor: "#1f2937",
-        logging: false,
-        useCORS: true,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
-
-      // Calculate how many pages we need
-      const scaledHeight = imgHeight * ratio;
-      const pageHeight = pdfHeight;
-      let heightLeft = scaledHeight;
-      let position = 0;
-
-      // First page
-      pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      heightLeft -= pageHeight;
-
-      // Additional pages if needed
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", imgX, position, imgWidth * ratio, imgHeight * ratio);
-        heightLeft -= pageHeight;
-      }
-
-      const roleTitle = report.roleTitle || "Interview";
-      const date = new Date().toISOString().split("T")[0];
-      pdf.save(`${roleTitle.replace(/\s+/g, "_")}_Report_${date}.pdf`);
-    } catch (err) {
-      console.error("Error generating PDF:", err);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-400";
     if (score >= 60) return "text-yellow-400";
@@ -208,31 +148,8 @@ export default function ReportPage() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6"
         >
-          {/* Download Button - Outside the PDF capture area */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleDownloadPDF}
-              disabled={isDownloading}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center gap-2"
-            >
-              {isDownloading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Generating PDF...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Download PDF
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Report Content - This will be captured for PDF */}
-          <div ref={reportRef} className="space-y-6 bg-gray-900 p-4 rounded-lg">
+          {/* Report Content */}
+          <div className="space-y-6 bg-gray-900 p-4 rounded-lg">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold mb-2">Interview Report</h1>
               {report.roleTitle && (
@@ -347,7 +264,7 @@ export default function ReportPage() {
             </div>
           </div>
 
-          {/* Action Buttons - Outside the PDF capture area */}
+          {/* Action Buttons */}
           <div className="flex gap-4">
             <button
               onClick={() => router.push("/setup")}
