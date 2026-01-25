@@ -102,7 +102,7 @@ export default function SetupPage() {
                 htmlFor="roleDesc"
                 className="block text-sm font-medium text-gray-300 mb-2"
               >
-                Role Description (optional)
+                Role Description
               </label>
               <textarea
                 id="roleDesc"
