@@ -1,6 +1,6 @@
-# PRESSURE
+# Rehearse
 
-**PRESSURE** is an applied AI system that makes realistic interview preparation accessible to anyone regardless of background, location, or access to industry professionals.
+**Rehearse** is an applied AI system that makes realistic interview preparation accessible to anyone regardless of background, location, or access to industry professionals.
 
 It runs live, voice-based interviews, adapts questions in real time, evaluates responses like a human interviewer, and produces structured, scored feedback which helps level the interview prep playing field.
 
@@ -18,13 +18,13 @@ Many candidates lack access to:
 
 As a result, interview success often depends more on **who you know** than **what you know**.
 
-PRESSURE applies AI to remove that barrier by giving anyone with an internet connection access to realistic interview practice and actionable feedback.
+Rehearse applies AI to remove that barrier by giving anyone with an internet connection access to realistic interview practice and actionable feedback.
 
 ---
 
-## 💡 What PRESSURE Does
+## 💡 What Rehearse Does
 
-PRESSURE simulates a real interview, not a scripted practice session.
+Rehearse simulates a real interview, not a scripted practice session.
 
 - The interviewer initiates the conversation  
 - Responses happen live, without pause or retries  
@@ -39,10 +39,10 @@ This mirrors how real interviews behave, especially for candidates who have neve
 ## 🎙️ How It Works
 
 1. The user selects a role and interview intensity  
-2. PRESSURE conducts a live, voice-based interview  
+2. Rehearse conducts a live, voice-based interview  
 3. The system actively listens and adapts follow-up questions in real time  
 4. The interview can be ended at any point  
-5. PRESSURE generates structured feedback based on the interview so far  
+5. Rehearse generates structured feedback based on the interview so far  
 
 The system is intentionally robust to partial interviews which reflects real-world interruptions and time constraints.
 
@@ -50,7 +50,7 @@ The system is intentionally robust to partial interviews which reflects real-wor
 
 ## 📊 Applied AI Evaluation
 
-After the interview, PRESSURE generates an evaluation that includes:
+After the interview, Rehearse generates an evaluation that includes:
 - Overall performance score  
 - Communication, relevance, and structure breakdown  
 - Behavioral patterns under pressure  
@@ -61,15 +61,15 @@ This transforms interview prep from repetition into personalized coaching powere
 
 ---
 
-## 🚀 What Makes PRESSURE Different
+## 🚀 What Makes Rehearse Different
 
-Unlike traditional mock interview tools or generic chatbots, PRESSURE:
+Unlike traditional mock interview tools or generic chatbots, Rehearse:
 - Does not rely on static question lists  
 - Does not wait for the user to be “ready”  
 - Actively listens and adapts in real time  
 - Simulates the pacing and pressure of real interviews  
 
-This makes PRESSURE especially valuable for candidates without prior interview exposure.
+This makes Rehearse especially valuable for candidates without prior interview exposure.
 
 ---
 
@@ -80,7 +80,7 @@ This makes PRESSURE especially valuable for candidates without prior interview e
 - Candidates from underrepresented or underserved backgrounds  
 - Anyone seeking realistic interview practice without paid coaching  
 
-PRESSURE is designed to be **accessible, scalable, and fair**.
+Rehearse is designed to be **accessible, scalable, and fair**.
 
 # How to use:
 ### Backend
