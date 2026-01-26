@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiUrl } from "@/lib/api";
 
 interface Report {
   overallScore: number;
@@ -63,7 +62,7 @@ export default function ReportPage() {
       const repeatRequestCount = storedRepeatCount ? parseInt(storedRepeatCount, 10) : 0;
 
       try {
-        const response = await fetch(`${API_URL}/report/final`, {
+        const response = await fetch(apiUrl("/report/final"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

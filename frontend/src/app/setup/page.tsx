@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { apiUrl } from "@/lib/api";
 
 type Intensity = "CALM" | "STRICT" | "AGGRESSIVE";
 
@@ -60,7 +59,7 @@ export default function SetupPage() {
 
     try {
       const name = localStorage.getItem("userName") || "Candidate";
-      const response = await fetch(`${API_URL}/session/start`, {
+      const response = await fetch(apiUrl("/session/start"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
