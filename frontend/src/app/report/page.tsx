@@ -59,6 +59,8 @@ export default function ReportPage() {
 
       const sessionData = JSON.parse(storedSession);
       const turns: Turn[] = JSON.parse(storedTurns);
+      const storedRepeatCount = localStorage.getItem("repeatRequestCount");
+      const repeatRequestCount = storedRepeatCount ? parseInt(storedRepeatCount, 10) : 0;
 
       try {
         const response = await fetch(`${API_URL}/report/final`, {
@@ -72,6 +74,7 @@ export default function ReportPage() {
             roleBucket: sessionData.roleBucket,
             intensity: storedIntensity || "CALM",
             turns,
+            repeatRequestCount,
           }),
         });
 
@@ -267,13 +270,27 @@ export default function ReportPage() {
           {/* Action Buttons */}
           <div className="flex gap-4">
             <button
-              onClick={() => router.push("/setup")}
+              onClick={() => {
+                // Set flag to indicate user wants to practice again with same role
+                localStorage.setItem("practiceAgain", "true");
+                router.push("/setup");
+              }}
               className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
             >
               Practice Again
             </button>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => {
+                // Clear all session data for a fresh start
+                localStorage.removeItem("roleTitle");
+                localStorage.removeItem("roleDesc");
+                localStorage.removeItem("intensity");
+                localStorage.removeItem("sessionData");
+                localStorage.removeItem("interviewTurns");
+                localStorage.removeItem("repeatRequestCount");
+                localStorage.removeItem("practiceAgain");
+                router.push("/");
+              }}
               className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
             >
               New Session

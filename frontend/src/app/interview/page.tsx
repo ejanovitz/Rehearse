@@ -31,7 +31,8 @@ export default function InterviewPage() {
   const [state, setState] = useState<InterviewState>("DOOR_OPENING");
   const [phase, setPhase] = useState<Phase>("GREETING");
   const [mainQuestionIndex, setMainQuestionIndex] = useState(0);
-  const [followupAsked, setFollowupAsked] = useState(false);
+  const [followupCount, setFollowupCount] = useState(0);  // Track 0, 1, or 2 follow-ups
+  const [repeatRequestCount, setRepeatRequestCount] = useState(0);  // Track repeat/rephrase requests
   const [currentAiText, setCurrentAiText] = useState("");
   const [transcript, setTranscript] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -358,13 +359,14 @@ export default function InterviewPage() {
     isExitingRef.current = true;
     stopAllMedia();
 
-    // Save turns with incomplete flag
+    // Save turns with incomplete flag and repeat request count
     localStorage.setItem("interviewTurns", JSON.stringify(turns));
     localStorage.setItem("interviewIncomplete", "true");
+    localStorage.setItem("repeatRequestCount", String(repeatRequestCount));
 
     // Navigate to report
     router.push("/report");
-  }, [turns, router, stopAllMedia]);
+  }, [turns, router, stopAllMedia, repeatRequestCount]);
 
   const processNextTurn = useCallback(async (userText: string) => {
     if (!sessionData || isExitingRef.current) return;
@@ -388,7 +390,7 @@ export default function InterviewPage() {
           sessionId: sessionData.sessionId,
           phase,
           mainQuestionIndex,
-          followupAsked,
+          followupCount,
           roleTitle,
           roleDesc,
           roleBucket: sessionData.roleBucket,
@@ -396,6 +398,7 @@ export default function InterviewPage() {
           aiPromptedText: currentAiText,
           userTranscript: userText,
           turnsSoFar: updatedTurns,
+          repeatRequestCount,
         }),
       });
 
@@ -403,6 +406,23 @@ export default function InterviewPage() {
       if (isExitingRef.current) return;
 
       const data = await response.json();
+
+      // Handle repeat/rephrase request - don't count as a follow-up
+      if (data.action === "REPEAT_QUESTION") {
+        setRepeatRequestCount(prev => prev + 1);
+        setCurrentAiText(data.aiText);
+        // Don't add a turn for repeat requests, but update the last AI text
+
+        setState("AI_SPEAKING");
+        await playAudio(data.aiText);
+
+        if (isExitingRef.current) return;
+
+        setTranscript("");
+        setState("USER_LISTENING");
+        startListening();
+        return;
+      }
 
       if (data.action === "END") {
         setCurrentAiText(data.aiText);
@@ -416,6 +436,7 @@ export default function InterviewPage() {
           aiText: data.aiText,
           userTranscript: "",
         }]));
+        localStorage.setItem("repeatRequestCount", String(repeatRequestCount));
         localStorage.removeItem("interviewIncomplete");
 
         setState("DOOR_CLOSING");
@@ -429,7 +450,7 @@ export default function InterviewPage() {
 
       setCurrentAiText(data.aiText);
       setMainQuestionIndex(data.mainQuestionIndex);
-      setFollowupAsked(data.followupAsked);
+      setFollowupCount(data.followupCount);
 
       if (data.action === "ASK_FOLLOWUP") {
         setPhase("FOLLOWUP");
@@ -460,7 +481,7 @@ export default function InterviewPage() {
         startListening();
       }
     }
-  }, [sessionData, currentAiText, turns, phase, mainQuestionIndex, followupAsked, roleTitle, roleDesc, intensity, playAudio, router, startListening]);
+  }, [sessionData, currentAiText, turns, phase, mainQuestionIndex, followupCount, repeatRequestCount, roleTitle, roleDesc, intensity, playAudio, router, startListening]);
 
   useEffect(() => {
     if (state !== "DOOR_OPENING" || !sessionData || isExitingRef.current) return;
@@ -588,7 +609,7 @@ export default function InterviewPage() {
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-400">
               Question {Math.min(mainQuestionIndex + 1, 3)} of 3
-              {followupAsked && " (Follow-up)"}
+              {phase === "FOLLOWUP" && followupCount > 0 && ` (Follow-up ${followupCount}/2)`}
             </div>
           </div>
           <div className="flex gap-2">

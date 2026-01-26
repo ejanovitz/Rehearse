@@ -26,6 +26,28 @@ export default function SetupPage() {
     const name = localStorage.getItem("userName");
     if (!name) {
       router.push("/");
+      return;
+    }
+
+    // Only auto-fill if user clicked "Practice Again"
+    const practiceAgain = localStorage.getItem("practiceAgain");
+    if (practiceAgain === "true") {
+      const storedRoleTitle = localStorage.getItem("roleTitle");
+      const storedRoleDesc = localStorage.getItem("roleDesc");
+      const storedIntensity = localStorage.getItem("intensity") as Intensity | null;
+
+      if (storedRoleTitle) {
+        setRoleTitle(storedRoleTitle);
+      }
+      if (storedRoleDesc) {
+        setRoleDesc(storedRoleDesc);
+      }
+      if (storedIntensity && ["CALM", "STRICT", "AGGRESSIVE"].includes(storedIntensity)) {
+        setIntensity(storedIntensity);
+      }
+
+      // Clear the flag after using it
+      localStorage.removeItem("practiceAgain");
     }
   }, [router]);
 

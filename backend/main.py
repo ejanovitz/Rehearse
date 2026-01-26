@@ -22,7 +22,10 @@ app.add_middleware(
 )
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+# Cheaper model for interview questions/responses
+OPENROUTER_MODEL_FAST = os.getenv("OPENROUTER_MODEL_FAST", "openai/gpt-5-mini")
+# Higher quality model for final report analysis
+OPENROUTER_MODEL_REPORT = os.getenv("OPENROUTER_MODEL_REPORT", "anthropic/claude-3.5-sonnet")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 sessions: dict = {}
@@ -52,7 +55,7 @@ class TurnNextRequest(BaseModel):
     sessionId: str
     phase: str  # GREETING, MAIN, FOLLOWUP
     mainQuestionIndex: int
-    followupAsked: bool
+    followupCount: int  # 0, 1, or 2 - number of follow-ups asked for current main question
     roleTitle: str
     roleDesc: str
     roleBucket: str
@@ -60,6 +63,7 @@ class TurnNextRequest(BaseModel):
     aiPromptedText: str
     userTranscript: str
     turnsSoFar: list[TurnItem]
+    repeatRequestCount: int = 0  # Track how many times user asked to repeat/rephrase
 
 
 class InternalEval(BaseModel):
@@ -69,10 +73,10 @@ class InternalEval(BaseModel):
 
 
 class TurnNextResponse(BaseModel):
-    action: str  # ASK_FOLLOWUP, NEXT_MAIN, END
+    action: str  # ASK_FOLLOWUP, NEXT_MAIN, END, REPEAT_QUESTION
     aiText: str
     mainQuestionIndex: int
-    followupAsked: bool
+    followupCount: int  # 0, 1, or 2 - number of follow-ups asked for current main question
     internalEval: InternalEval
 
 
@@ -84,6 +88,7 @@ class ReportFinalRequest(BaseModel):
     roleBucket: str
     intensity: str
     turns: list[TurnItem]
+    repeatRequestCount: int = 0  # Track how many times user asked to repeat/rephrase
 
 
 class ReportFinalResponse(BaseModel):
@@ -105,16 +110,20 @@ def infer_role_bucket(role_title: str) -> str:
     return "MID"
 
 
-async def call_llm(messages: list[dict], retry: bool = True) -> str:
+async def call_llm(messages: list[dict], model: Optional[str] = None, retry: bool = True) -> str:
     if not OPENROUTER_API_KEY:
         raise HTTPException(status_code=500, detail="OPENROUTER_API_KEY not configured")
+
+    # Default to fast model if not specified
+    if model is None:
+        model = OPENROUTER_MODEL_FAST
 
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
     payload = {
-        "model": OPENROUTER_MODEL,
+        "model": model,
         "messages": messages,
         "temperature": 0.7,
     }
@@ -134,15 +143,15 @@ def extract_json(text: str) -> dict:
     raise ValueError("No JSON found in response")
 
 
-async def call_llm_json(messages: list[dict], retry: bool = True) -> dict:
-    text = await call_llm(messages)
+async def call_llm_json(messages: list[dict], model: Optional[str] = None, retry: bool = True) -> dict:
+    text = await call_llm(messages, model=model)
     try:
         return extract_json(text)
     except (json.JSONDecodeError, ValueError):
         if retry:
             messages.append({"role": "assistant", "content": text})
             messages.append({"role": "user", "content": "Please respond with valid JSON only."})
-            text = await call_llm(messages, retry=False)
+            text = await call_llm(messages, model=model, retry=False)
             return extract_json(text)
         raise HTTPException(status_code=500, detail="Failed to parse LLM JSON response")
 
@@ -154,6 +163,30 @@ def get_intensity_persona(intensity: str) -> str:
         "AGGRESSIVE": "You are a challenging interviewer who tests candidates under pressure. Be direct, occasionally interrupt with probing follow-ups, and maintain high expectations."
     }
     return personas.get(intensity, personas["CALM"])
+
+
+def is_repeat_request(user_transcript: str) -> bool:
+    """Check if the user is asking to repeat or rephrase the question."""
+    transcript_lower = user_transcript.lower().strip()
+
+    repeat_phrases = [
+        "repeat", "say that again", "again please", "one more time",
+        "rephrase", "can you rephrase", "could you rephrase",
+        "didn't catch", "didn't hear", "didn't understand",
+        "what was the question", "what's the question", "what is the question",
+        "sorry what", "pardon", "excuse me",
+        "can you repeat", "could you repeat", "please repeat",
+        "say again", "come again", "i'm sorry",
+        "didn't get that", "missed that", "what did you say",
+        "can you clarify", "could you clarify"
+    ]
+
+    # Check if the response is short (likely just a request to repeat)
+    # and contains repeat-related phrases
+    is_short = len(transcript_lower.split()) <= 15
+    contains_repeat_phrase = any(phrase in transcript_lower for phrase in repeat_phrases)
+
+    return is_short and contains_repeat_phrase
 
 
 @app.post("/session/start", response_model=SessionStartResponse)
@@ -180,7 +213,8 @@ Respond ONLY with valid JSON in this format:
 {{"greeting": "...", "firstQuestion": "..."}}"""
 
     messages = [{"role": "user", "content": prompt}]
-    result = await call_llm_json(messages)
+    # Use Claude for the greeting/intro for better quality first impression
+    result = await call_llm_json(messages, model=OPENROUTER_MODEL_REPORT)
 
     sessions[session_id] = {
         "name": req.name,
@@ -255,6 +289,33 @@ async def turn_next(req: TurnNextRequest):
         notes=[]
     )
 
+    # Check for repeat/rephrase request first (applies to any phase except greeting)
+    if req.phase != "GREETING" and is_repeat_request(req.userTranscript):
+        # Generate a rephrased version of the question
+        rephrase_prompt = f"""You are interviewing for {req.roleTitle}.
+{persona}
+
+The candidate asked you to repeat or rephrase the question. The original question was:
+"{req.aiPromptedText}"
+
+Rephrase the question in a slightly different way to help the candidate understand. Keep the same intent but use different wording.
+
+IMPORTANT: Do NOT include any instructions or hints on how to answer the question.
+
+Respond ONLY with valid JSON:
+{{"aiText": "your rephrased question"}}"""
+
+        messages = [{"role": "user", "content": rephrase_prompt}]
+        result = await call_llm_json(messages)
+
+        return TurnNextResponse(
+            action="REPEAT_QUESTION",
+            aiText=result.get("aiText", f"Of course. {req.aiPromptedText}"),
+            mainQuestionIndex=req.mainQuestionIndex,
+            followupCount=req.followupCount,  # Don't change followup count
+            internalEval=internal_eval
+        )
+
     if req.phase == "GREETING":
         next_prompt = f"""You are interviewing for {req.roleTitle}.
 {persona}
@@ -278,11 +339,13 @@ Respond ONLY with valid JSON."""
             action="NEXT_MAIN",
             aiText=result.get("aiText", "Great, let's begin. " + req.turnsSoFar[0].aiText if req.turnsSoFar else "Let's begin with the first question."),
             mainQuestionIndex=0,
-            followupAsked=False,
+            followupCount=0,
             internalEval=internal_eval
         )
 
-    if req.mainQuestionIndex >= 2 and (req.followupAsked or req.phase == "FOLLOWUP"):
+    # End interview after 3rd main question has been answered (with any follow-ups)
+    # We end when: mainQuestionIndex >= 2 AND (we've asked 2 follow-ups OR coming from followup phase)
+    if req.mainQuestionIndex >= 2 and (req.followupCount >= 2 or req.phase == "FOLLOWUP"):
         closing_prompt = f"""You are concluding a behavioral interview for {req.roleTitle}.
 {persona}
 
@@ -301,11 +364,12 @@ Respond ONLY with valid JSON:
             action="END",
             aiText=result.get("aiText", "Thank you for your time today. We'll be in touch soon."),
             mainQuestionIndex=req.mainQuestionIndex,
-            followupAsked=req.followupAsked,
+            followupCount=req.followupCount,
             internalEval=internal_eval
         )
 
-    if req.phase == "MAIN" and not req.followupAsked:
+    # Allow up to 2 follow-ups per main question
+    if req.phase == "MAIN" and req.followupCount < 2:
         followup_prompt = f"""You are interviewing for {req.roleTitle}.
 {persona}
 
@@ -315,8 +379,9 @@ Conversation so far:
 The candidate just answered: {req.userTranscript}
 
 Decide: should you ask a follow-up to dig deeper, or move to the next main question?
-- If the answer was vague or you want more detail, ask ONE follow-up
-- If the answer was complete, move to the next main behavioral question
+- If the answer was vague, incomplete, or you want more specific details/examples, ask a follow-up
+- If the answer was sufficiently complete and detailed, move to the next main behavioral question
+- You can ask up to 2 follow-ups per main question if needed to get a complete picture
 
 IMPORTANT: Do NOT include any instructions or hints on how to answer the question. Just ask the question directly without telling the candidate to use STAR format, provide specific examples, or any other answering guidance.
 
@@ -330,14 +395,52 @@ Stay in character. Do NOT give feedback. Just ask questions naturally."""
 
         action = result.get("action", "NEXT_MAIN")
         next_index = req.mainQuestionIndex if action == "ASK_FOLLOWUP" else req.mainQuestionIndex + 1
+        new_followup_count = req.followupCount + 1 if action == "ASK_FOLLOWUP" else 0
 
         return TurnNextResponse(
             action=action,
             aiText=result.get("aiText", "Tell me more about that."),
             mainQuestionIndex=next_index,
-            followupAsked=action == "ASK_FOLLOWUP",
+            followupCount=new_followup_count,
             internalEval=internal_eval
         )
+
+    # After follow-ups are exhausted or coming from FOLLOWUP phase, check if we can ask another follow-up
+    # or need to move to the next main question
+    if req.phase == "FOLLOWUP" and req.followupCount < 2:
+        # We're in follow-up phase but haven't exhausted follow-ups yet
+        followup_prompt = f"""You are interviewing for {req.roleTitle}.
+{persona}
+
+Conversation so far:
+{conversation_history}
+
+The candidate just answered your follow-up question: {req.userTranscript}
+
+Decide: do you need one more follow-up to get complete information, or is the answer now sufficient to move on?
+- If you still need more detail or clarity, ask ONE more follow-up
+- If the answer is now complete enough, move to the next main question
+
+IMPORTANT: Do NOT include any instructions or hints on how to answer the question.
+
+Respond ONLY with valid JSON:
+{{"action": "ASK_FOLLOWUP" or "NEXT_MAIN", "aiText": "your follow-up question OR transition + next main question"}}
+
+Stay in character. Do NOT give feedback."""
+
+        messages = [{"role": "user", "content": followup_prompt}]
+        result = await call_llm_json(messages)
+
+        action = result.get("action", "NEXT_MAIN")
+        if action == "ASK_FOLLOWUP":
+            return TurnNextResponse(
+                action=action,
+                aiText=result.get("aiText", "Tell me more about that."),
+                mainQuestionIndex=req.mainQuestionIndex,
+                followupCount=req.followupCount + 1,
+                internalEval=internal_eval
+            )
+        # Fall through to next main question if NEXT_MAIN
 
     next_q_prompt = f"""You are interviewing for {req.roleTitle}.
 {persona}
@@ -362,7 +465,7 @@ Stay in character. Do NOT give feedback."""
         action="NEXT_MAIN",
         aiText=result.get("aiText", "Moving on, tell me about a time you worked on a team."),
         mainQuestionIndex=req.mainQuestionIndex + 1,
-        followupAsked=False,
+        followupCount=0,  # Reset follow-up count for new main question
         internalEval=internal_eval
     )
 
@@ -374,13 +477,17 @@ async def report_final(req: ReportFinalRequest):
         for t in req.turns
     ])
 
+    repeat_info = ""
+    if req.repeatRequestCount > 0:
+        repeat_info = f"\nNote: The candidate asked for questions to be repeated or rephrased {req.repeatRequestCount} time(s) during the interview. Consider this in your assessment of their listening skills and ability to process questions under pressure."
+
     prompt = f"""Analyze this complete behavioral interview and generate a detailed report.
 
 Candidate: {req.name}
 Role: {req.roleTitle}
 Role Description: {req.roleDesc}
 Experience Level: {req.roleBucket}
-Interview Intensity: {req.intensity}
+Interview Intensity: {req.intensity}{repeat_info}
 
 Full Interview Transcript:
 {conversation}
@@ -406,7 +513,8 @@ Be specific and constructive. Reference actual content from their answers.
 Respond ONLY with valid JSON."""
 
     messages = [{"role": "user", "content": prompt}]
-    result = await call_llm_json(messages)
+    # Use higher quality model for final report analysis
+    result = await call_llm_json(messages, model=OPENROUTER_MODEL_REPORT)
 
     return ReportFinalResponse(
         overallScore=result.get("overallScore", 70),

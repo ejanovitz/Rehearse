@@ -12,6 +12,15 @@ export default function StartPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim()) {
+      // Clear previous session data for a fresh start
+      localStorage.removeItem("roleTitle");
+      localStorage.removeItem("roleDesc");
+      localStorage.removeItem("intensity");
+      localStorage.removeItem("sessionData");
+      localStorage.removeItem("interviewTurns");
+      localStorage.removeItem("repeatRequestCount");
+      localStorage.removeItem("practiceAgain");
+
       localStorage.setItem("userName", name.trim());
       router.push("/setup");
     }
