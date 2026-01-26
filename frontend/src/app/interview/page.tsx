@@ -7,8 +7,6 @@ import Lottie, { LottieRefCurrentProps } from "lottie-react";
 import avatarAnimation from "../../../public/animations/avatar.json";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const ELEVENLABS_API_KEY = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
-const ELEVENLABS_VOICE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM";
 
 type InterviewState = "DOOR_OPENING" | "AI_SPEAKING" | "USER_LISTENING" | "THINKING" | "DOOR_CLOSING";
 type Phase = "GREETING" | "MAIN" | "FOLLOWUP";
@@ -122,29 +120,18 @@ export default function InterviewPage() {
   }, [router]);
 
   const playAudio = useCallback(async (text: string) => {
-    if (muted || !ELEVENLABS_API_KEY || isExitingRef.current) {
+    if (muted || isExitingRef.current) {
       return;
     }
 
     try {
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
-        {
-          method: "POST",
-          headers: {
-            "xi-api-key": ELEVENLABS_API_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text,
-            model_id: "eleven_monolingual_v1",
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.5,
-            },
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
 
       if (!response.ok || isExitingRef.current) return;
 

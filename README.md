@@ -107,9 +107,10 @@ Open http://localhost:3000
 
 ### Backend (.env)
 - `OPENROUTER_API_KEY` - Your OpenRouter API key
-- `OPENROUTER_MODEL` - Model to use (default: anthropic/claude-3.5-sonnet)
+- `OPENROUTER_MODEL_FAST` - Model to use for interview questions (default: openai/gpt-5-mini)
+- `OPENROUTER_MODEL_REPORT` - Model to use for final report (default: anthropic/claude-3.5-sonnet)
+- `ELEVENLABS_API_KEY` - Your ElevenLabs API key
+- `ELEVENLABS_VOICE_ID` - Voice ID for TTS (default: 21m00Tcm4TlvDq8ikWAM)
 
 ### Frontend (.env.local)
-- `NEXT_PUBLIC_ELEVENLABS_API_KEY` - Your ElevenLabs API key
-- `NEXT_PUBLIC_ELEVENLABS_VOICE_ID` - Voice ID for TTS
 - `NEXT_PUBLIC_API_URL` - Backend URL (default: http://localhost:8000)

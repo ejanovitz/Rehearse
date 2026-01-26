@@ -6,6 +6,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 import httpx
 
@@ -27,6 +28,9 @@ OPENROUTER_MODEL_FAST = os.getenv("OPENROUTER_MODEL_FAST", "openai/gpt-5-mini")
 # Higher quality model for final report analysis
 OPENROUTER_MODEL_REPORT = os.getenv("OPENROUTER_MODEL_REPORT", "anthropic/claude-3.5-sonnet")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 
 sessions: dict = {}
 
@@ -99,6 +103,11 @@ class ReportFinalResponse(BaseModel):
     patternUnderPressure: str
     idealAnswerRewrite: str
     nextSteps: list[str]
+
+
+class TTSRequest(BaseModel):
+    text: str
+    voice_id: Optional[str] = None
 
 
 def infer_role_bucket(role_title: str) -> str:
@@ -531,6 +540,36 @@ Respond ONLY with valid JSON."""
         idealAnswerRewrite=result.get("idealAnswerRewrite", "Consider structuring your answer using the STAR method..."),
         nextSteps=result.get("nextSteps", ["Practice STAR format", "Prepare specific examples", "Research the company"])
     )
+
+
+@app.post("/tts")
+async def text_to_speech(req: TTSRequest):
+    if not ELEVENLABS_API_KEY:
+        raise HTTPException(status_code=500, detail="ELEVENLABS_API_KEY not configured")
+
+    voice_id = req.voice_id or ELEVENLABS_VOICE_ID
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+            headers={
+                "xi-api-key": ELEVENLABS_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json={
+                "text": req.text,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.5,
+                },
+            },
+        )
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="TTS generation failed")
+
+        return Response(content=response.content, media_type="audio/mpeg")
 
 
 @app.get("/health")
