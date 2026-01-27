@@ -20,6 +20,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "https://rehearse-nu.vercel.app",
+        "https://www.rehearseapp.ca",
+        "https://rehearseapp.ca",
     ],
     allow_origin_regex=r"^https://rehearse-.*\.vercel\.app$",
     allow_credentials=True,
