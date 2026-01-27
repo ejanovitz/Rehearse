@@ -129,7 +129,7 @@ export default function SetupPage() {
                 id="roleDesc"
                 value={roleDesc}
                 onChange={(e) => setRoleDesc(e.target.value)}
-                placeholder="Describe key responsibilities, team, or specific focus areas"
+                placeholder="Just copy and paste a job description from a job post! it's that simple."
                 rows={3}
                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400 resize-none"
               />

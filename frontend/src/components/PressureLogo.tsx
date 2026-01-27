@@ -39,7 +39,7 @@ export default function PressureLogo({ className = "" }: PressureLogoProps) {
           </filter>
         </defs>
 
-        {/* White circle with P logo at the top center */}
+        {/* White circle with R logo at the top center */}
         <motion.g
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -64,9 +64,9 @@ export default function PressureLogo({ className = "" }: PressureLogoProps) {
             filter="url(#glow)"
           />
 
-          {/* Stylized P - using a custom path for a modern look */}
+          {/* Stylized R - using a custom path for a modern look */}
           <g transform="translate(200, 45)">
-            {/* Main stem of P */}
+            {/* Main stem of R */}
             <path
               d="M -8 -18 L -8 18"
               stroke="black"
@@ -74,7 +74,7 @@ export default function PressureLogo({ className = "" }: PressureLogoProps) {
               strokeLinecap="round"
               fill="none"
             />
-            {/* Bowl of P - stylized with slight break */}
+            {/* Bowl of R */}
             <path
               d="M -8 -18 Q 12 -18 12 -5 Q 12 6 -8 6"
               stroke="black"
@@ -82,19 +82,18 @@ export default function PressureLogo({ className = "" }: PressureLogoProps) {
               strokeLinecap="round"
               fill="none"
             />
-            {/* Small accent/pressure crack in P */}
+            {/* Leg of R */}
             <path
-              d="M 2 -12 L 5 -8"
+              d="M -2 6 L 12 18"
               stroke="black"
-              strokeWidth="1.5"
+              strokeWidth="5"
               strokeLinecap="round"
               fill="none"
-              opacity="0.6"
             />
           </g>
         </motion.g>
 
-        {/* PRESSURE text on curved path */}
+        {/* REHEARSE text on curved path */}
         <motion.text
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -106,69 +105,9 @@ export default function PressureLogo({ className = "" }: PressureLogoProps) {
           letterSpacing="12"
         >
           <textPath href="#textCurve" startOffset="50%" textAnchor="middle">
-            PRESSURE
+            REHEARSE
           </textPath>
         </motion.text>
-
-        {/* Crack lines overlay - these create the pressure crack effect */}
-        <motion.g
-          initial={{ opacity: 0, pathLength: 0 }}
-          animate={{ opacity: 1, pathLength: 1 }}
-          transition={{ duration: 1, delay: 0.8 }}
-          stroke="rgba(100, 100, 100, 0.7)"
-          strokeWidth="1.5"
-          fill="none"
-          strokeLinecap="round"
-        >
-          {/* Crack on P */}
-          <path d="M 55 110 L 60 120 L 55 127" />
-          <path d="M 58 115 L 65 117" />
-
-          {/* Crack on R */}
-          <path d="M 95 113 L 100 123 L 95 130" />
-          <path d="M 98 120 L 105 122" />
-
-          {/* Crack on first E */}
-          <path d="M 135 115 L 138 125 L 142 123" />
-
-          {/* Crack on first S */}
-          <path d="M 175 120 L 180 130 L 175 135" />
-          <path d="M 178 127 L 185 129" />
-
-          {/* Crack on second S */}
-          <path d="M 215 123 L 218 133 L 222 130" />
-
-          {/* Crack on U */}
-          <path d="M 255 120 L 260 130 L 255 137" />
-          <path d="M 258 127 L 265 128" />
-
-          {/* Crack on R */}
-          <path d="M 295 115 L 300 125 L 295 133" />
-          <path d="M 298 123 L 305 125" />
-
-          {/* Crack on final E */}
-          <path d="M 335 113 L 340 123 L 337 130" />
-          <path d="M 338 120 L 345 121" />
-        </motion.g>
-
-        {/* Additional fine crack details */}
-        <motion.g
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          transition={{ duration: 1.2, delay: 1 }}
-          stroke="rgba(80, 80, 80, 0.5)"
-          strokeWidth="0.8"
-          fill="none"
-        >
-          {/* Micro cracks */}
-          <path d="M 70 117 L 73 121" />
-          <path d="M 150 123 L 153 127" />
-          <path d="M 190 125 L 193 129" />
-          <path d="M 230 127 L 233 131" />
-          <path d="M 270 123 L 273 127" />
-          <path d="M 310 120 L 313 124" />
-          <path d="M 350 118 L 353 122" />
-        </motion.g>
       </svg>
     </div>
   );
