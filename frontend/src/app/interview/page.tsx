@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Lottie, { LottieRefCurrentProps } from "lottie-react";
 import avatarAnimation from "../../../public/animations/avatar.json";
-import { apiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 type InterviewState = "DOOR_OPENING" | "AI_SPEAKING" | "USER_LISTENING" | "THINKING" | "DOOR_CLOSING";
 type Phase = "GREETING" | "MAIN" | "FOLLOWUP";
@@ -124,11 +124,8 @@ export default function InterviewPage() {
     }
 
     try {
-      const response = await fetch(apiUrl("/tts"), {
+      const response = await apiFetch("/tts", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ text }),
       });
 
@@ -369,9 +366,8 @@ export default function InterviewPage() {
     setTurns(updatedTurns);
 
     try {
-      const response = await fetch(apiUrl("/turn/next"), {
+      const response = await apiFetch("/turn/next", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: sessionData.sessionId,
           phase,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { apiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 interface Report {
   overallScore: number;
@@ -52,7 +52,7 @@ export default function ReportPage() {
       }
 
       if (!storedSession || !storedTurns) {
-        router.push("/");
+        router.push("/start");
         return;
       }
 
@@ -62,9 +62,8 @@ export default function ReportPage() {
       const repeatRequestCount = storedRepeatCount ? parseInt(storedRepeatCount, 10) : 0;
 
       try {
-        const response = await fetch(apiUrl("/report/final"), {
+        const response = await apiFetch("/report/final", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             sessionId: sessionData.sessionId,
             name: userName || "Candidate",
@@ -130,7 +129,7 @@ export default function ReportPage() {
           <h1 className="text-xl font-bold text-red-400 mb-4">Error</h1>
           <p className="text-gray-300 mb-6">{error}</p>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/start")}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium"
           >
             Start Over
@@ -288,7 +287,7 @@ export default function ReportPage() {
                 localStorage.removeItem("interviewTurns");
                 localStorage.removeItem("repeatRequestCount");
                 localStorage.removeItem("practiceAgain");
-                router.push("/");
+                router.push("/start");
               }}
               className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-medium transition-colors"
             >

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { apiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 type Intensity = "CALM" | "STRICT" | "AGGRESSIVE";
 
@@ -59,9 +59,8 @@ export default function SetupPage() {
 
     try {
       const name = localStorage.getItem("userName") || "Candidate";
-      const response = await fetch(apiUrl("/session/start"), {
+      const response = await apiFetch("/session/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           roleTitle: roleTitle.trim(),
