@@ -158,9 +158,9 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { label: "Setup Your Interview", description: "Choose your role and intensity level", image: "/images/Setup.png" },
-              { label: "Live Interview", description: "Speak naturally with the AI interviewer", image: "/images/Interview.png" },
-              { label: "Detailed Report", description: "Get scored and see areas to improve", image: "/images/Report.png" },
+              { label: "Setup Your Interview", description: "Choose your role and intensity level", image: "/images/setup.png" },
+              { label: "Live Interview", description: "Speak naturally with the AI interviewer", image: "/images/interview.png" },
+              { label: "Detailed Report", description: "Get scored and see areas to improve", image: "/images/report.png" },
             ].map((item, i) => (
               <AnimatedSection key={i}>
                 <div className="rounded-xl overflow-hidden border border-gray-700/50">
